@@ -16,20 +16,20 @@ class NNFromScratch
 
     static int Main(string[] args)
     {
-        Stopwatch sw = new();
+        Stopwatch sw = new(); // Figure out how to make these measurements more easily
         sw.Start();
         DownloadFiles(false).Wait();
         sw.Stop();
-        Console.WriteLine($"Downloaded files in {sw.ElapsedMilliseconds} ms");
+        Debug.WriteLine($"Downloaded files in {sw.ElapsedMilliseconds} ms");
         if (client.IsValueCreated) client.Value.Dispose();
         sw.Restart();
         ExtractFiles(false).Wait();
         sw.Stop();
-        Console.WriteLine($"Extracted files in {sw.ElapsedMilliseconds} ms");
+        Debug.WriteLine($"Extracted files in {sw.ElapsedMilliseconds} ms");
         sw.Restart();
         ParseFiles();
         sw.Stop();
-        Console.WriteLine($"Parsed files in {sw.ElapsedMilliseconds} ms");
+        Debug.WriteLine($"Parsed files in {sw.ElapsedMilliseconds} ms");
         return 0;
     }
 
@@ -40,7 +40,6 @@ class NNFromScratch
             string image_file = string.Concat(FILE_PREFIX, file_names[2 * i]);
             string label_file = string.Concat(FILE_PREFIX, file_names[2 * i + 1]);
             ParseFile(image_file, label_file, i == 0 ? training_data : test_data);
-            Console.WriteLine($"Parsed {image_file} and {label_file}");
         });
     }
 
@@ -73,6 +72,8 @@ class NNFromScratch
         byte[] img_flat = img_fs.ReadBytes(IMAGE_WIDTH * IMAGE_WIDTH * num_entries);
         for (int i = 0; i < num_entries; i++)
             image_data[i] = new Tuple<byte, byte[]>(lbls[i], img_flat[(i * IMAGE_WIDTH * IMAGE_WIDTH)..((i + 1) * IMAGE_WIDTH * IMAGE_WIDTH)]);
+
+        Debug.WriteLine($"Parsed {image_file} and {label_file}");
     }
 
     static async Task ExtractFiles(bool overwrite)
@@ -89,7 +90,7 @@ class NNFromScratch
             using FileStream compressed_fs = File.OpenRead(compressed_file), output_fs = File.Create(output_file);
             using GZipStream gzstream = new(compressed_fs, CompressionMode.Decompress);
             await gzstream.CopyToAsync(output_fs, ct);
-            Console.WriteLine($"Decompressed {output_file}");
+            Debug.WriteLine($"Decompressed {output_file}");
         });
     }
 
@@ -103,9 +104,9 @@ class NNFromScratch
                 return;
             _ = Directory.CreateDirectory(Path.GetDirectoryName(file)!);
             File.Create(file).Close();
-            Console.WriteLine($"Downloading File: {uri}");
+            Debug.WriteLine($"Downloading File: {uri}");
             await DownloadFile(uri, file, ct);
-            Console.WriteLine($"Downloaded File: {file}");
+            Debug.WriteLine($"Downloaded File: {file}");
         });
     }
 
