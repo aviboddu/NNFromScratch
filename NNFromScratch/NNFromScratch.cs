@@ -3,10 +3,10 @@ using System.IO.Compression;
 
 class NNFromScratch
 {
-    private static readonly HttpClient client = new()
+    private static readonly Lazy<HttpClient> client = new(() => new HttpClient()
     {
         BaseAddress = new Uri("https://github.com/HIPS/hypergrad/raw/master/data/mnist/")
-    };
+    });
 
     private const string FILE_PREFIX = "./data/";
     private const int IMAGE_WIDTH = 28;
@@ -21,7 +21,7 @@ class NNFromScratch
         DownloadFiles(false).Wait();
         sw.Stop();
         Console.WriteLine($"Downloaded files in {sw.ElapsedMilliseconds} ms");
-        client.Dispose();
+        if (client.IsValueCreated) client.Value.Dispose();
         sw.Restart();
         ExtractFiles(false).Wait();
         sw.Stop();
@@ -111,7 +111,7 @@ class NNFromScratch
 
     static async Task DownloadFile(string uri, string output, CancellationToken ct)
     {
-        byte[] file_content = await client.GetByteArrayAsync(uri, ct);
+        byte[] file_content = await client.Value.GetByteArrayAsync(uri, ct);
         await File.WriteAllBytesAsync(output, file_content, ct);
     }
 }
