@@ -3,19 +3,30 @@ using System.IO.Compression;
 
 class NNFromScratch
 {
-    private const string URI_PREFIX = "https://github.com/HIPS/hypergrad/raw/master/data/mnist/";
+    private static readonly HttpClient client = new()
+    {
+        BaseAddress = new Uri("https://github.com/HIPS/hypergrad/raw/master/data/mnist/")
+    };
+
     private const string FILE_PREFIX = "./data/";
     private const int IMAGE_WIDTH = 28;
     private static readonly string[] file_names = ["train-images-idx3-ubyte", "train-labels-idx1-ubyte", "t10k-images-idx3-ubyte", "t10k-labels-idx1-ubyte"];
-    private static readonly Tuple<byte, byte[,]>[] training_data = new Tuple<byte, byte[,]>[60000];
-    private static readonly Tuple<byte, byte[,]>[] test_data = new Tuple<byte, byte[,]>[10000];
+    private static readonly Tuple<byte, byte[]>[] training_data = new Tuple<byte, byte[]>[60000];
+    private static readonly Tuple<byte, byte[]>[] test_data = new Tuple<byte, byte[]>[10000];
 
     static int Main(string[] args)
     {
         Stopwatch sw = new();
-        DownloadFiles(false).Wait();
-        ExtractFiles(false).Wait();
         sw.Start();
+        DownloadFiles(false).Wait();
+        sw.Stop();
+        Console.WriteLine($"Downloaded files in {sw.ElapsedMilliseconds} ms");
+        client.Dispose();
+        sw.Restart();
+        ExtractFiles(false).Wait();
+        sw.Stop();
+        Console.WriteLine($"Extracted files in {sw.ElapsedMilliseconds} ms");
+        sw.Restart();
         ParseFiles();
         sw.Stop();
         Console.WriteLine($"Parsed files in {sw.ElapsedMilliseconds} ms");
@@ -40,9 +51,11 @@ class NNFromScratch
         return BitConverter.ToInt32(data);
     }
 
-    static void ParseFile(string image_file, string label_file, Tuple<byte, byte[,]>[] image_data)
+    static void ParseFile(string image_file, string label_file, Tuple<byte, byte[]>[] image_data)
     {
         using BinaryReader img_fs = new(File.OpenRead(image_file)), lbl_fs = new(File.OpenRead(label_file));
+
+        // Validating files
         int mgc_num = ReadInt32Flipped(img_fs);
         if (mgc_num != 2051)
             throw new InvalidDataException($"Image file's magic number should be 2051, was {mgc_num}");
@@ -54,22 +67,18 @@ class NNFromScratch
             throw new InvalidDataException("Label file's number of entries is inequal to image file's number of entries");
         if (ReadInt32Flipped(img_fs) != IMAGE_WIDTH || ReadInt32Flipped(img_fs) != IMAGE_WIDTH)
             throw new InvalidDataException($"Image file's image dimensions are not equal to {IMAGE_WIDTH}");
+
+        // Parsing Files
+        byte[] lbls = lbl_fs.ReadBytes(num_entries);
+        byte[] img_flat = img_fs.ReadBytes(IMAGE_WIDTH * IMAGE_WIDTH * num_entries);
         for (int i = 0; i < num_entries; i++)
-        {
-            byte lbl = lbl_fs.ReadByte();
-            byte[] img_flat = img_fs.ReadBytes(IMAGE_WIDTH * IMAGE_WIDTH);
-            byte[,] img = new byte[IMAGE_WIDTH, IMAGE_WIDTH];
-            for (int j = 0; j < img_flat.Length; j++)
-                img[j / IMAGE_WIDTH, j % IMAGE_WIDTH] = img_flat[j];
-            image_data[i] = new Tuple<byte, byte[,]>(lbl, img);
-        }
+            image_data[i] = new Tuple<byte, byte[]>(lbls[i], img_flat[(i * IMAGE_WIDTH * IMAGE_WIDTH)..((i + 1) * IMAGE_WIDTH * IMAGE_WIDTH)]);
     }
 
     static async Task ExtractFiles(bool overwrite)
     {
         await Parallel.ForEachAsync(file_names, async (file_name, ct) =>
         {
-            string uri = string.Concat(URI_PREFIX, file_name);
             string compressed_file = string.Concat(FILE_PREFIX, file_name, ".gz");
             string output_file = string.Concat(FILE_PREFIX, file_name);
             if (!overwrite && File.Exists(output_file))
@@ -88,7 +97,7 @@ class NNFromScratch
     {
         await Parallel.ForEachAsync(file_names, async (file_name, ct) =>
         {
-            string uri = string.Concat(URI_PREFIX, file_name, ".gz");
+            string uri = string.Concat(file_name, ".gz");
             string file = string.Concat(FILE_PREFIX, file_name, ".gz");
             if (!overwrite && File.Exists(file))
                 return;
@@ -102,11 +111,7 @@ class NNFromScratch
 
     static async Task DownloadFile(string uri, string output, CancellationToken ct)
     {
-        byte[] file_content;
-        using (HttpClient client = new())
-        {
-            file_content = await client.GetByteArrayAsync(uri, ct);
-        }
+        byte[] file_content = await client.GetByteArrayAsync(uri, ct);
         await File.WriteAllBytesAsync(output, file_content, ct);
     }
 }
