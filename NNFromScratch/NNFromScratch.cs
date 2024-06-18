@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO.Compression;
 
 class NNFromScratch
@@ -11,9 +12,13 @@ class NNFromScratch
 
     static int Main(string[] args)
     {
+        Stopwatch sw = new();
         DownloadFiles(false).Wait();
         ExtractFiles(false).Wait();
+        sw.Start();
         ParseFiles();
+        sw.Stop();
+        Console.WriteLine($"Parsed files in {sw.ElapsedMilliseconds} ms");
         return 0;
     }
 
