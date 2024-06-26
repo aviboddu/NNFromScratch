@@ -30,6 +30,22 @@ class NNFromScratch
         ParseFiles();
         sw.Stop();
         Debug.WriteLine($"Parsed files in {sw.ElapsedMilliseconds} ms");
+
+
+        int[] layerSizes = [IMAGE_WIDTH * IMAGE_WIDTH, 10, 10, 10];
+        sw.Restart();
+        NeuralNet.NeuralNet nn = new(layerSizes);
+        sw.Stop();
+        Debug.WriteLine($"Created Neural Network in {sw.ElapsedMilliseconds} ms");
+        int total_iter = 60000;
+        sw.Restart();
+        for (int i = 0; i < total_iter; i++)
+        {
+            nn.CalculateOutput([.. training_data[i].Item2]);
+        }
+        sw.Stop();
+        Debug.WriteLine($"Average time to calculate output of NN is {((float)sw.ElapsedMilliseconds) / total_iter} ms");
+
         return 0;
     }
 
