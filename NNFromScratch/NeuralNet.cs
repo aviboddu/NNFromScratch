@@ -1,58 +1,61 @@
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 
 namespace NeuralNet;
 
 public class NeuralNet
 {
-    private readonly List<float>[][] neuralNet;
+    private readonly Node[][] neuralNet;
     public NeuralNet(int[] layerSizes)
     {
-        neuralNet = new List<float>[layerSizes.Length - 1][];
+        neuralNet = new Node[layerSizes.Length - 1][];
         for (int i = 1; i < layerSizes.Length; i++)
         {
-            neuralNet[i - 1] = new List<float>[layerSizes[i]];
+            neuralNet[i - 1] = new Node[layerSizes[i]];
             for (int j = 0; j < layerSizes[i]; j++)
-            {
-                neuralNet[i - 1][j] = RandomList(layerSizes[i - 1] + 1);
-            }
+                neuralNet[i - 1][j] = new(layerSizes[i - 1]);
         }
     }
 
-    private static List<float> RandomList(int length)
-    {
-        var list = new List<float>();
-        for (int i = 0; i < length; i++)
-            list.Add(Random.Shared.NextSingle());
-        return list;
-    }
-
-    public List<float> CalculateOutput(List<float> input)
+    public float[] CalculateOutput(float[] input)
     {
         for (int i = 0; i < neuralNet.Length; i++)
-        {
             input = CalculateLayer(input, i);
-        }
-        input.RemoveAt(input.Count - 1);
         return input;
     }
 
-    public List<float> CalculateLayer(List<float> input, int nextLayer)
+    public float[] CalculateLayer(float[] input, int nextLayer)
     {
-        input.Add(1);
-        List<float> output = new(neuralNet[nextLayer].Length);
+        float[] output = new float[neuralNet[nextLayer].Length];
         for (int i = 0; i < neuralNet[nextLayer].Length; i++)
-            output.Add(Dot(neuralNet[nextLayer][i], input));
-        output.Add(1);
+            output[i] = neuralNet[nextLayer][i].CalculateOutput(input);
         return output;
     }
 
-    private static float Dot(List<float> left, List<float> right)
+    [method: SetsRequiredMembers]
+    private class Node(int num_weights)
     {
-        float sum = 0;
-        foreach ((float x, float y) in left.Zip(right))
+        public required float[] weights = RandomFloats(num_weights);
+        public readonly float bias = Random.Shared.NextSingle();
+
+        public float CalculateOutput(float[] input)
         {
-            sum += x * y;
+            Debug.Assert(input.Length == weights.Length, "input.Length != weights.Length");
+            float output = 0;
+            for (int i = 0; i < input.Length; i++)
+                output += weights[i] * input[i];
+            output += bias;
+            return Sigmoid(output);
         }
-        return sum;
+
+        private static float[] RandomFloats(int num_floats)
+        {
+            float[] result = new float[num_floats];
+            for (int i = 0; i < num_floats; i++)
+                result[i] = Random.Shared.NextSingle();
+            return result;
+        }
+
+        private static float Sigmoid(float x) => 1 / (1 + MathF.Exp(-x));
     }
 }
