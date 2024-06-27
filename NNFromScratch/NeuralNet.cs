@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.InteropServices;
-using MathUtils;
+using Utils;
 
 namespace NeuralNet;
 
@@ -14,7 +13,7 @@ public class NeuralNet
         Debug.Assert(layerSizes.All((i) => i > 0), "layerSizes must be greater than 0");
         neuralNet = new Layer[layerSizes.Length - 1];
         for (int i = 1; i < layerSizes.Length; i++)
-            neuralNet[i - 1] = new MatrixLayer(layerSizes[i], layerSizes[i - 1]);
+            neuralNet[i - 1] = new Layer(layerSizes[i], layerSizes[i - 1]);
     }
 
     public float[] CalculateOutput(float[] input)
@@ -24,47 +23,79 @@ public class NeuralNet
         return input;
     }
 
+    public (float[][] activations, float[][] weightedInputs) CalculateActivations(float[] input)
+    {
+
+        float[][] activations = new float[neuralNet.Length + 1][];
+        float[][] weightedInputs = new float[neuralNet.Length][];
+        activations[0] = input;
+        for (int i = 0; i < neuralNet.Length; i++)
+        {
+            weightedInputs[i] = neuralNet[i].WeightedInput(activations[i]);
+            activations[i + 1] = MathUtils.Sigmoid(weightedInputs[i]);
+        }
+        return (activations, weightedInputs);
+    }
+
     public float CalculateTotalCost(LabelImagePair[] data)
     {
         float cost = 0;
         for (int i = 0; i < data.Length; i++)
         {
-            cost += CalculateCost(data[i]);
+            cost += CalculateCost(CalculateOutput(data[i].img), data[i].label);
         }
-        return cost / data.Length;
+        return cost / (2 * data.Length);
     }
 
-    private float CalculateCost(LabelImagePair pair)
+    private static float CalculateCost(float[] output, float[] label)
     {
-        float[] output = CalculateOutput(pair.img);
         float cost = 0;
         for (int i = 0; i < output.Length; i++)
         {
-            float diff = output[i] - pair.label[i];
+            float diff = output[i] - label[i];
             cost += diff * diff;
         }
         return cost;
     }
 
-    public float[] CalculateTotalNegativeGradient(LabelImagePair[] data)
+    public Delta CalculateTotalNegativeGradient(LabelImagePair[] data)
     {
-        float[] gradient = new float[neuralNet.Sum((l) => l.TotalWeights())];
+        Delta gradient = new(null!, null!);
         foreach (LabelImagePair pair in data)
-        {
-            float[] component_grad = CalculateNegativeGradient(pair);
-            for (int i = 0; i < gradient.Length; i++)
-                gradient[i] += component_grad[i];
-        }
-        for (int i = 0; i < gradient.Length; i++)
-            gradient[i] /= data.Length;
+            gradient.Add(CalculateNegativeGradient(pair));
+        gradient.Div(data.Length);
         return gradient;
     }
 
-    public float[] CalculateNegativeGradient(LabelImagePair pair)
+    public Delta CalculateNegativeGradient(LabelImagePair pair)
     {
-        return new float[neuralNet.Sum((n) => n.TotalWeights())];
+        // Output Layer Error: (label-output) * SigmoidDerivative(WeightedInput)
+        (float[][] activations, float[][] weightedInputs) = CalculateActivations(pair.img);
+        float[][] errors = new float[neuralNet.Length][];
+        errors[^1] = OutputLayerError(pair, activations, weightedInputs);
+        for (int i = neuralNet.Length - 2; i >= 0; i--)
+            errors[i] = LayerError(weightedInputs, i, errors[i + 1]);
+
+        float[][,] delta_w = new float[neuralNet.Length][,];
+        for (int i = 0; i < errors.Length; i++)
+            delta_w[i] = MathUtils.VecVecToMatrix(errors[i], activations[i]);
+
+        return new(errors, delta_w);
     }
 
+    private float[] LayerError(in float[][] weightedInputs, int layer, float[] nextLayerError)
+    {
+        float[] invErr = MathUtils.MatMul(MathUtils.MatTranspose(neuralNet[layer + 1].weights), nextLayerError);
+        float[] SigDiv = MathUtils.SigmoidDerivative(weightedInputs[layer]);
+        return MathUtils.HadmardProduct(invErr, SigDiv).ToArray();
+    }
+
+    private float[] OutputLayerError(LabelImagePair pair, in float[][] activations, in float[][] weightedInputs)
+    {
+        float[] CostGrad = pair.label.Zip(CalculateOutput(pair.img), (a, b) => a - b).ToArray();
+        float[] SigDiv = MathUtils.SigmoidDerivative(weightedInputs[^1]);
+        return MathUtils.HadmardProduct(CostGrad, SigDiv).ToArray();
+    }
 }
 
 public struct LabelImagePair
@@ -73,83 +104,79 @@ public struct LabelImagePair
     public float[] img;
 }
 
-public abstract class Layer
-{
-    public abstract float[] CalculateLayer(float[] input);
-    public abstract int TotalWeights();
-}
-
 // 0.036 ms to CalculateOutput
-public class MatrixLayer : Layer
+public class Layer
 {
-    private int LayerSize => weights.GetLength(0);
-    private int InputSize => weights.GetLength(1);
+    public int LayerSize => weights.GetLength(0);
+    public int InputSize => weights.GetLength(1);
 
     public required float[,] weights;
     public required float[] biases;
 
     [SetsRequiredMembers]
-    public MatrixLayer(int layerSize, int inputSize)
+    public Layer(int layerSize, int inputSize)
     {
         weights = new float[layerSize, inputSize];
         for (int i = 0; i < layerSize; i++)
-        {
             for (int j = 0; j < inputSize; j++)
-            {
                 weights[i, j] = Random.Shared.NextSingle();
-            }
-        }
 
         biases = Random.Shared.NextSingles(layerSize);
     }
 
-    public override int TotalWeights() => weights.Length + biases.Length;
+    public int TotalWeights() => weights.Length + biases.Length;
 
-    public override float[] CalculateLayer(float[] input)
+    public float[] CalculateLayer(float[] input)
     {
         Debug.Assert(input.Length == InputSize);
-        float[] output = new float[LayerSize];
+        return MathUtils.Sigmoid(WeightedInput(input));
+    }
+
+    public float[] WeightedInput(float[] input)
+    {
+        float[] output = MathUtils.MatMul(weights, input);
         for (int i = 0; i < output.Length; i++)
-        {
-            float dotProd = MathUtils.MathUtils.Dot(MemoryMarshal.CreateSpan(ref weights[i, 0], input.Length), input);
-            output[i] = MathUtils.MathUtils.Sigmoid(dotProd + biases[i]);
-        }
+            output[i] += biases[i];
         return output;
     }
 }
 
-// 0.036 ms to CalculateOutput
-public class NodeLayer : Layer
+public class Delta(float[][] delta_bias, float[][,] delta_weights)
 {
-    public required Node[] nodes;
+    private float[][] delta_bias = delta_bias;
+    private float[][,] delta_weights = delta_weights;
 
-    [SetsRequiredMembers]
-    public NodeLayer(int layerSize, int inputSize)
+    public void Add(Delta other)
     {
-        nodes = new Node[layerSize];
-        for (int i = 0; i < layerSize; i++)
-            nodes[i] = new Node(inputSize);
+        if (delta_bias == null)
+            delta_bias = other.delta_bias;
+        else
+            for (int i = 0; i < delta_bias.Length; i++)
+                for (int j = 0; j < delta_bias[i].Length; j++)
+                    delta_bias[i][j] += other.delta_bias![i][j];
+
+        if (delta_weights == null)
+            delta_weights = other.delta_weights;
+        else
+            for (int i = 0; i < delta_weights.Length; i++)
+                for (int j = 0; j < delta_weights[i].GetLength(0); j++)
+                    for (int k = 0; k < delta_weights[i].GetLength(1); k++)
+                        delta_weights[i][j, k] += other.delta_weights[i][j, k];
+
     }
 
-    public override int TotalWeights() => nodes.Sum((i) => i.weights.Length) + nodes.Length;
-
-    public override float[] CalculateLayer(float[] input)
+    public void Div(float val)
     {
-        float[] output = new float[nodes.Length];
-        for (int i = 0; i < nodes.Length; i++)
-            output[i] = nodes[i].CalculateOutput(input);
-        return output;
-    }
-}
+        float invVal = 1f / val;
+        if (delta_bias != null)
+            for (int i = 0; i < delta_bias.Length; i++)
+                for (int j = 0; j < delta_bias[i].Length; j++)
+                    delta_bias[i][j] *= invVal;
 
-[method: SetsRequiredMembers]
-public class Node(int num_weights)
-{
-    public required float[] weights = Random.Shared.NextSingles(num_weights);
-    public readonly float bias = Random.Shared.NextSingle();
-
-    public float CalculateOutput(float[] input)
-    {
-        return MathUtils.MathUtils.Sigmoid(MathUtils.MathUtils.Dot(weights, input) + bias);
+        if (delta_weights != null)
+            for (int i = 0; i < delta_weights.Length; i++)
+                for (int j = 0; j < delta_weights[i].GetLength(0); j++)
+                    for (int k = 0; k < delta_weights[i].GetLength(1); k++)
+                        delta_weights[i][j, k] *= invVal;
     }
 }

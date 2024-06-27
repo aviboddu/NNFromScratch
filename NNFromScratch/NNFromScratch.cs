@@ -48,6 +48,10 @@ class NNFromScratch
         sw.Stop();
         Debug.WriteLine($"Cost = {cost}. Calculated in {sw.ElapsedMilliseconds} ms");
 
+        sw.Restart();
+        Delta delta = nn.CalculateTotalNegativeGradient(training_data);
+        sw.Stop();
+        Debug.WriteLine($"Calculated total gradient in {sw.ElapsedMilliseconds} ms");
         return 0;
     }
 
