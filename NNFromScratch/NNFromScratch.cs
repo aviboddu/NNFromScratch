@@ -64,12 +64,15 @@ class NNFromScratch
         for (int b = 0; b <= byte.MaxValue; b++)
             byte_to_float[b] = b * invByteMax;
 
-        Parallel.For(0, 2, i =>
-        {
-            string image_file = string.Concat(FILE_PREFIX, file_names[2 * i]);
-            string label_file = string.Concat(FILE_PREFIX, file_names[2 * i + 1]);
-            ParseFile(image_file, label_file, i == 0 ? training_data : test_data, byte_to_float);
-        });
+        // Parse training data
+        string image_file = string.Concat(FILE_PREFIX, file_names[0]);
+        string label_file = string.Concat(FILE_PREFIX, file_names[1]);
+        ParseFile(image_file, label_file, training_data, byte_to_float);
+
+        // Parse test data
+        image_file = string.Concat(FILE_PREFIX, file_names[2]);
+        label_file = string.Concat(FILE_PREFIX, file_names[3]);
+        ParseFile(image_file, label_file, test_data, byte_to_float);
     }
 
     static int ReadInt32Flipped(BinaryReader reader)

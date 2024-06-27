@@ -8,8 +8,10 @@ namespace NeuralNet;
 public class NeuralNet
 {
     private readonly Layer[] neuralNet;
+
     public NeuralNet(int[] layerSizes)
     {
+        Debug.Assert(layerSizes.All((i) => i > 0), "layerSizes must be greater than 0");
         neuralNet = new Layer[layerSizes.Length - 1];
         for (int i = 1; i < layerSizes.Length; i++)
             neuralNet[i - 1] = new MatrixLayer(layerSizes[i], layerSizes[i - 1]);
@@ -31,9 +33,10 @@ public abstract class Layer
 // // 0.0007 ms to CalculateOutput
 public class MatrixLayer : Layer
 {
-    public Vector<float>[] weights;
-    public float[] biases;
+    public required Vector<float>[] weights;
+    public required float[] biases;
 
+    [SetsRequiredMembers]
     public MatrixLayer(int layerSize, int inputSize)
     {
         weights = new Vector<float>[layerSize];
@@ -78,7 +81,7 @@ public class NodeLayer : Layer
 [method: SetsRequiredMembers]
 public class Node(int num_weights)
 {
-    readonly int num_weights = num_weights;
+    private readonly int num_weights = num_weights;
     public required Vector<float> weights = new(Random.Shared.NextSingles(num_weights));
     public readonly float bias = Random.Shared.NextSingle();
 
