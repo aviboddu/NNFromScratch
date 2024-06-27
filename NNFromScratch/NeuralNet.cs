@@ -57,7 +57,7 @@ public class NeuralNet
         return cost / data.Length;
     }
 
-    private float CalculateClassification(float[] output, float[] label)
+    private static float CalculateClassification(float[] output, float[] label)
     {
         int labelArgMax = 0;
         int outputArgMax = 0;
