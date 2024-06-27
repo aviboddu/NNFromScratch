@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO.Compression;
+using NeuralNet;
 
 class NNFromScratch
 {
@@ -14,8 +15,8 @@ class NNFromScratch
     private const int IMAGE_SIZE = IMAGE_WIDTH * IMAGE_WIDTH;
 
     private static readonly string[] file_names = ["train-images-idx3-ubyte", "train-labels-idx1-ubyte", "t10k-images-idx3-ubyte", "t10k-labels-idx1-ubyte"];
-    private static readonly (float[] label, float[] img)[] training_data = new (float[] label, float[] img)[60000];
-    private static readonly (float[] label, float[] img)[] test_data = new (float[] label, float[] img)[10000];
+    private static readonly LabelImagePair[] training_data = new LabelImagePair[60000];
+    private static readonly LabelImagePair[] test_data = new LabelImagePair[10000];
 
     static int Main(string[] args)
     {
@@ -37,15 +38,13 @@ class NNFromScratch
 
 
         sw.Restart();
-        int[] layerSizes = [IMAGE_SIZE, 10, 10, 10];
+        int[] layerSizes = [IMAGE_SIZE, 16, 16, 10];
         NeuralNet.NeuralNet nn = new(layerSizes);
         sw.Stop();
         Debug.WriteLine($"Created Neural Network in {sw.ElapsedMilliseconds} ms");
 
         sw.Restart();
-        float cost = 0;
-        for (int i = 0; i < training_data.Length; i++)
-            cost += nn.CalculateCost(training_data[i].img, training_data[i].label);
+        float cost = nn.CalculateTotalCost(training_data);
         sw.Stop();
         Debug.WriteLine($"Cost = {cost}. Calculated in {sw.ElapsedMilliseconds} ms");
 
@@ -78,7 +77,7 @@ class NNFromScratch
         return BitConverter.ToInt32(data);
     }
 
-    static void ParseFile(string image_file, string label_file, (float[] lbl, float[] img)[] image_data, float[] byte_to_float)
+    static void ParseFile(string image_file, string label_file, LabelImagePair[] image_data, float[] byte_to_float)
     {
         using BinaryReader img_fs = new(File.OpenRead(image_file)), lbl_fs = new(File.OpenRead(label_file));
 
@@ -100,9 +99,8 @@ class NNFromScratch
         byte[] img_flat = img_fs.ReadBytes(IMAGE_SIZE * num_entries);
         for (int i = 0; i < num_entries; i++)
         {
-            float[] labelVec = LabelToVec(lbls[i]);
-            float[] imgVals = ImgBytesToFloat(img_flat[(i * IMAGE_SIZE)..((i + 1) * IMAGE_SIZE)], byte_to_float);
-            image_data[i] = new(labelVec, imgVals);
+            image_data[i].label = LabelToVec(lbls[i]);
+            image_data[i].img = ImgBytesToFloat(img_flat[(i * IMAGE_SIZE)..((i + 1) * IMAGE_SIZE)], byte_to_float);
         }
     }
 

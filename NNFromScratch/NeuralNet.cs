@@ -24,22 +24,59 @@ public class NeuralNet
         return input;
     }
 
-    public float CalculateCost(float[] input, float[] desiredOutput)
+    public float CalculateTotalCost(LabelImagePair[] data)
     {
-        float[] output = CalculateOutput(input);
+        float cost = 0;
+        for (int i = 0; i < data.Length; i++)
+        {
+            cost += CalculateCost(data[i]);
+        }
+        return cost / data.Length;
+    }
+
+    private float CalculateCost(LabelImagePair pair)
+    {
+        float[] output = CalculateOutput(pair.img);
         float cost = 0;
         for (int i = 0; i < output.Length; i++)
         {
-            float diff = output[i] - desiredOutput[i];
+            float diff = output[i] - pair.label[i];
             cost += diff * diff;
         }
         return cost;
     }
+
+    public float[] CalculateTotalNegativeGradient(LabelImagePair[] data)
+    {
+        float[] gradient = new float[neuralNet.Sum((l) => l.TotalWeights())];
+        foreach (LabelImagePair pair in data)
+        {
+            float[] component_grad = CalculateNegativeGradient(pair);
+            for (int i = 0; i < gradient.Length; i++)
+                gradient[i] += component_grad[i];
+        }
+        for (int i = 0; i < gradient.Length; i++)
+            gradient[i] /= data.Length;
+        return gradient;
+    }
+
+    public float[] CalculateNegativeGradient(LabelImagePair pair)
+    {
+        return new float[neuralNet.Sum((n) => n.TotalWeights())];
+    }
+
+}
+
+public struct LabelImagePair
+{
+    public float[] label;
+    public float[] img;
 }
 
 public abstract class Layer
 {
     public abstract float[] CalculateLayer(float[] input);
+    public abstract int TotalWeights();
 }
 
 // 0.036 ms to CalculateOutput
@@ -66,6 +103,8 @@ public class MatrixLayer : Layer
         biases = Random.Shared.NextSingles(layerSize);
     }
 
+    public override int TotalWeights() => weights.Length + biases.Length;
+
     public override float[] CalculateLayer(float[] input)
     {
         Debug.Assert(input.Length == InputSize);
@@ -91,6 +130,8 @@ public class NodeLayer : Layer
         for (int i = 0; i < layerSize; i++)
             nodes[i] = new Node(inputSize);
     }
+
+    public override int TotalWeights() => nodes.Sum((i) => i.weights.Length) + nodes.Length;
 
     public override float[] CalculateLayer(float[] input)
     {
