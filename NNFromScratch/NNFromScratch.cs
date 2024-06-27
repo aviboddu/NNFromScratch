@@ -21,15 +21,14 @@ class NNFromScratch
     {
         Stopwatch sw = new(); // TODO: Figure out how to make these measurements more easily
         sw.Start();
-        DownloadFiles(false).Wait();
-        if (client.IsValueCreated) client.Value.Dispose();
+        if (!file_names.All((f) => File.Exists(Path.Join(FILE_PREFIX, f))))
+        {
+            DownloadFiles().Wait();
+            if (client.IsValueCreated) client.Value.Dispose();
+            ExtractFiles().Wait();
+        }
         sw.Stop();
-        Debug.WriteLine($"Downloaded files in {sw.ElapsedMilliseconds} ms");
-
-        sw.Restart();
-        ExtractFiles(false).Wait();
-        sw.Stop();
-        Debug.WriteLine($"Extracted files in {sw.ElapsedMilliseconds} ms");
+        Debug.WriteLine($"Downloaded and extracted files in {sw.ElapsedMilliseconds} ms");
 
         sw.Restart();
         ParseFiles();
@@ -37,8 +36,8 @@ class NNFromScratch
         Debug.WriteLine($"Parsed files in {sw.ElapsedMilliseconds} ms");
 
 
-        int[] layerSizes = [IMAGE_SIZE, 10, 10, 10];
         sw.Restart();
+        int[] layerSizes = [IMAGE_SIZE, 10, 10, 10];
         NeuralNet.NeuralNet nn = new(layerSizes);
         sw.Stop();
         Debug.WriteLine($"Created Neural Network in {sw.ElapsedMilliseconds} ms");
@@ -65,13 +64,13 @@ class NNFromScratch
             byte_to_float[b] = b * invByteMax;
 
         // Parse training data
-        string image_file = string.Concat(FILE_PREFIX, file_names[0]);
-        string label_file = string.Concat(FILE_PREFIX, file_names[1]);
+        string image_file = Path.Join(FILE_PREFIX, file_names[0]);
+        string label_file = Path.Join(FILE_PREFIX, file_names[1]);
         ParseFile(image_file, label_file, training_data, byte_to_float);
 
         // Parse test data
-        image_file = string.Concat(FILE_PREFIX, file_names[2]);
-        label_file = string.Concat(FILE_PREFIX, file_names[3]);
+        image_file = Path.Join(FILE_PREFIX, file_names[2]);
+        label_file = Path.Join(FILE_PREFIX, file_names[3]);
         ParseFile(image_file, label_file, test_data, byte_to_float);
     }
 
@@ -108,7 +107,6 @@ class NNFromScratch
             float[] imgVals = ImgBytesToFloat(img_flat[(i * IMAGE_SIZE)..((i + 1) * IMAGE_SIZE)], byte_to_float);
             image_data[i] = new(labelVec, imgVals);
         }
-        Debug.WriteLine($"Parsed {image_file} and {label_file}");
     }
 
     private static float[] ImgBytesToFloat(byte[] img, float[] byte_to_float)
@@ -126,14 +124,12 @@ class NNFromScratch
         return vec;
     }
 
-    static async Task ExtractFiles(bool overwrite)
+    static async Task ExtractFiles()
     {
         await Parallel.ForEachAsync(file_names, async (file_name, ct) =>
         {
-            string compressed_file = string.Concat(FILE_PREFIX, file_name, ".gz");
-            string output_file = string.Concat(FILE_PREFIX, file_name);
-            if (!overwrite && File.Exists(output_file))
-                return;
+            string compressed_file = Path.Join(FILE_PREFIX, file_name, ".gz");
+            string output_file = Path.Join(FILE_PREFIX, file_name);
             if (!File.Exists(compressed_file))
                 throw new FileNotFoundException("Files must be downloaded before extraction.", compressed_file);
 
@@ -144,14 +140,12 @@ class NNFromScratch
         });
     }
 
-    static async Task DownloadFiles(bool overwrite)
+    static async Task DownloadFiles()
     {
         await Parallel.ForEachAsync(file_names, async (file_name, ct) =>
         {
+            string file = Path.Join(FILE_PREFIX, file_name, ".gz");
             string uri = string.Concat(file_name, ".gz");
-            string file = string.Concat(FILE_PREFIX, file_name, ".gz");
-            if (!overwrite && File.Exists(file))
-                return;
             _ = Directory.CreateDirectory(Path.GetDirectoryName(file)!);
             File.Create(file).Close();
             Debug.WriteLine($"Downloading File: {uri}");
