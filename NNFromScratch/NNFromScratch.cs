@@ -48,10 +48,10 @@ class NNFromScratch
         sw.Stop();
         Debug.WriteLine($"Cost = {cost}. Calculated in {sw.ElapsedMilliseconds} ms");
         float percentage = nn.CalculateClassificationPercentage(test_data);
-        Debug.WriteLine($"Classification percentage = {percentage}");
+        Debug.WriteLine($"Classification percentage = {percentage:P2}");
 
         sw.Restart();
-        int iter = 1000;
+        int iter = 100;
         for (int i = 0; i < iter; i++)
         {
             LabelImagePair[] training_subset = Random.Shared.GetItems(training_data, 100);
@@ -63,7 +63,7 @@ class NNFromScratch
         cost = nn.CalculateTotalCost(test_data);
         Debug.WriteLine($"New Cost = {cost}");
         percentage = nn.CalculateClassificationPercentage(test_data);
-        Debug.WriteLine($"Classification percentage = {percentage}");
+        Debug.WriteLine($"Classification percentage = {percentage:P2}");
         return 0;
     }
 
