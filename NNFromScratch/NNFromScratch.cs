@@ -43,12 +43,15 @@ class NNFromScratch
         sw.Stop();
         Debug.WriteLine($"Created Neural Network in {sw.ElapsedMilliseconds} ms");
 
-        int total_iter = 60000;
+        int total_iter_training = training_data.Length;
+        int total_iter_test = test_data.Length;
         sw.Restart();
-        for (int i = 0; i < total_iter; i++)
+        for (int i = 0; i < total_iter_training; i++)
             nn.CalculateOutput(training_data[i].img);
+        for (int i = 0; i < total_iter_test; i++)
+            nn.CalculateOutput(test_data[i].img);
         sw.Stop();
-        Debug.WriteLine($"Average time to calculate output of NN is {((float)sw.ElapsedMilliseconds) / total_iter} ms");
+        Debug.WriteLine($"Average time to calculate output of NN is {((float)sw.ElapsedMilliseconds) / (total_iter_training + total_iter_test)} ms");
 
         return 0;
     }
