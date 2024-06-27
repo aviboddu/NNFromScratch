@@ -51,10 +51,10 @@ class NNFromScratch
         Debug.WriteLine($"Classification percentage = {percentage:P2}");
 
         sw.Restart();
-        int iter = 100;
+        int iter = 128;
         for (int i = 0; i < iter; i++)
         {
-            LabelImagePair[] training_subset = Random.Shared.GetItems(training_data, 100);
+            LabelImagePair[] training_subset = Random.Shared.GetItems(training_data, 256);
             Delta delta = nn.CalculateTotalNegativeGradient(training_subset);
             nn.ApplyDelta(delta);
         }

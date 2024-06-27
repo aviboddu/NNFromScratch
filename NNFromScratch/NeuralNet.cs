@@ -62,7 +62,6 @@ public class NeuralNet
         int labelArgMax = 0;
         int outputArgMax = 0;
         float outputMax = float.MinValue;
-        float labelMax = float.MinValue;
         for (int i = 0; i < output.Length; i++)
         {
             if (output[i] > outputMax)
@@ -71,11 +70,8 @@ public class NeuralNet
                 outputArgMax = i;
             }
 
-            if (label[i] > labelMax)
-            {
-                labelMax = label[i];
+            if (label[i] == 1f)
                 labelArgMax = i;
-            }
         }
         if (outputArgMax == labelArgMax) return 1;
         return 0;
@@ -114,7 +110,7 @@ public class NeuralNet
         // Output Layer Error: (label-output) * SigmoidDerivative(WeightedInput)
         (float[][] activations, float[][] weightedInputs) = CalculateActivations(pair.img);
         float[][] errors = new float[neuralNet.Length][];
-        errors[^1] = OutputLayerError(pair, activations, weightedInputs);
+        errors[^1] = OutputLayerError(pair, weightedInputs);
         for (int i = neuralNet.Length - 2; i >= 0; i--)
             errors[i] = LayerError(weightedInputs, i, errors[i + 1]);
 
@@ -132,7 +128,7 @@ public class NeuralNet
         return MathUtils.HadmardProduct(invErr, SigDiv).ToArray();
     }
 
-    private float[] OutputLayerError(LabelImagePair pair, in float[][] activations, in float[][] weightedInputs)
+    private float[] OutputLayerError(LabelImagePair pair, in float[][] weightedInputs)
     {
         float[] CostGrad = pair.label.Zip(CalculateOutput(pair.img), (a, b) => a - b).ToArray();
         float[] SigDiv = MathUtils.SigmoidDerivative(weightedInputs[^1]);
