@@ -17,17 +17,24 @@ public class NeuralNet
             neuralNet[i - 1] = new MatrixLayer(layerSizes[i], layerSizes[i - 1]);
     }
 
-    public float[] CalculateOutput(float[] input)
+    public Vector<float> CalculateOutput(Vector<float> input)
     {
         for (int i = 0; i < neuralNet.Length; i++)
             input = neuralNet[i].CalculateLayer(input);
         return input;
     }
+
+    public float CalculateCost(Vector<float> input, Vector<float> desiredOutput)
+    {
+        Vector<float> output = CalculateOutput(input);
+        Vector<float> diff = Vector.Subtract(output, desiredOutput);
+        return Vector.Sum(Vector.Multiply(diff, diff));
+    }
 }
 
 public abstract class Layer
 {
-    public abstract float[] CalculateLayer(float[] input);
+    public abstract Vector<float> CalculateLayer(Vector<float> input);
 }
 
 // // 0.0007 ms to CalculateOutput
@@ -46,13 +53,12 @@ public class MatrixLayer : Layer
         biases = Random.Shared.NextSingles(layerSize);
     }
 
-    public override float[] CalculateLayer(float[] input)
+    public override Vector<float> CalculateLayer(Vector<float> input)
     {
         float[] output = new float[weights.Length];
-        Vector<float> inputVec = new(input);
         for (int i = 0; i < weights.Length; i++)
-            output[i] = MathUtils.MathUtils.Sigmoid(Vector.Dot(weights[i], inputVec) + biases[i]);
-        return output;
+            output[i] = MathUtils.MathUtils.Sigmoid(Vector.Dot(weights[i], input) + biases[i]);
+        return new(output);
     }
 }
 
@@ -69,12 +75,12 @@ public class NodeLayer : Layer
             nodes[i] = new Node(inputSize);
     }
 
-    public override float[] CalculateLayer(float[] input)
+    public override Vector<float> CalculateLayer(Vector<float> input)
     {
         float[] output = new float[nodes.Length];
         for (int i = 0; i < nodes.Length; i++)
             output[i] = nodes[i].CalculateOutput(input);
-        return output;
+        return new(output);
     }
 }
 
@@ -85,9 +91,8 @@ public class Node(int num_weights)
     public required Vector<float> weights = new(Random.Shared.NextSingles(num_weights));
     public readonly float bias = Random.Shared.NextSingle();
 
-    public float CalculateOutput(float[] input)
+    public float CalculateOutput(Vector<float> input)
     {
-        Debug.Assert(input.Length == num_weights, "input.Length != weights.Length");
-        return MathUtils.MathUtils.Sigmoid(Vector.Dot(weights, new(input)) + bias);
+        return MathUtils.MathUtils.Sigmoid(Vector.Dot(weights, input) + bias);
     }
 }

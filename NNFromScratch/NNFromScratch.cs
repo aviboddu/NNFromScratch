@@ -46,9 +46,9 @@ class NNFromScratch
         int total_iter_test = test_data.Length;
         sw.Restart();
         for (int i = 0; i < total_iter_training; i++)
-            nn.CalculateOutput(training_data[i].img);
+            nn.CalculateOutput(new(training_data[i].img));
         for (int i = 0; i < total_iter_test; i++)
-            nn.CalculateOutput(test_data[i].img);
+            nn.CalculateOutput(new(test_data[i].img));
         sw.Stop();
         Debug.WriteLine($"Average time to calculate output of NN is {((float)sw.ElapsedMilliseconds) / (total_iter_training + total_iter_test)} ms");
 
