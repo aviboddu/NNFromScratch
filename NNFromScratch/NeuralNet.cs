@@ -16,6 +16,18 @@ public class NeuralNet
             neuralNet[i - 1] = new Layer(layerSizes[i], layerSizes[i - 1]);
     }
 
+    public void ApplyDelta(Delta d)
+    {
+        for (int i = 0; i < neuralNet.Length; i++)
+        {
+            for (int j = 0; j < neuralNet[i].biases.Length; j++)
+                neuralNet[i].biases[j] += d.delta_bias[i][j];
+            for (int j = 0; j < neuralNet[i].weights.GetLength(0); j++)
+                for (int k = 0; k < neuralNet[i].weights.GetLength(1); k++)
+                    neuralNet[i].weights[j, k] += d.delta_weights[i][j, k];
+        }
+    }
+
     public float[] CalculateOutput(float[] input)
     {
         for (int i = 0; i < neuralNet.Length; i++)
@@ -143,8 +155,8 @@ public class Layer
 
 public class Delta(float[][] delta_bias, float[][,] delta_weights)
 {
-    private float[][] delta_bias = delta_bias;
-    private float[][,] delta_weights = delta_weights;
+    public float[][] delta_bias = delta_bias;
+    public float[][,] delta_weights = delta_weights;
 
     public void Add(Delta other)
     {

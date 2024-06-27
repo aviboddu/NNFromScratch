@@ -44,14 +44,22 @@ class NNFromScratch
         Debug.WriteLine($"Created Neural Network in {sw.ElapsedMilliseconds} ms");
 
         sw.Restart();
-        float cost = nn.CalculateTotalCost(training_data);
+        float cost = nn.CalculateTotalCost(test_data);
         sw.Stop();
         Debug.WriteLine($"Cost = {cost}. Calculated in {sw.ElapsedMilliseconds} ms");
 
         sw.Restart();
-        Delta delta = nn.CalculateTotalNegativeGradient(training_data);
+        int iter = 64;
+        for (int i = 0; i < iter; i++)
+        {
+            LabelImagePair[] training_subset = Random.Shared.GetItems(training_data, 100);
+            Delta delta = nn.CalculateTotalNegativeGradient(training_subset);
+            nn.ApplyDelta(delta);
+        }
         sw.Stop();
-        Debug.WriteLine($"Calculated total gradient in {sw.ElapsedMilliseconds} ms");
+        Debug.WriteLine($"Average time per step = {sw.ElapsedMilliseconds / iter} ms");
+        cost = nn.CalculateTotalCost(test_data);
+        Debug.WriteLine($"New Cost = {cost}");
         return 0;
     }
 
