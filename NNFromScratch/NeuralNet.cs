@@ -49,13 +49,43 @@ public class NeuralNet
         return (activations, weightedInputs);
     }
 
+    public float CalculateClassificationPercentage(LabelImagePair[] data)
+    {
+        float cost = 0;
+        for (int i = 0; i < data.Length; i++)
+            cost += CalculateClassification(CalculateOutput(data[i].img), data[i].label);
+        return cost / data.Length;
+    }
+
+    private float CalculateClassification(float[] output, float[] label)
+    {
+        int labelArgMax = 0;
+        int outputArgMax = 0;
+        float outputMax = float.MinValue;
+        float labelMax = float.MinValue;
+        for (int i = 0; i < output.Length; i++)
+        {
+            if (output[i] > outputMax)
+            {
+                outputMax = output[i];
+                outputArgMax = i;
+            }
+
+            if (label[i] > labelMax)
+            {
+                labelMax = label[i];
+                labelArgMax = i;
+            }
+        }
+        if (outputArgMax == labelArgMax) return 1;
+        return 0;
+    }
+
     public float CalculateTotalCost(LabelImagePair[] data)
     {
         float cost = 0;
         for (int i = 0; i < data.Length; i++)
-        {
             cost += CalculateCost(CalculateOutput(data[i].img), data[i].label);
-        }
         return cost / (2 * data.Length);
     }
 

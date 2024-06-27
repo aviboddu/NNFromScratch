@@ -47,9 +47,11 @@ class NNFromScratch
         float cost = nn.CalculateTotalCost(test_data);
         sw.Stop();
         Debug.WriteLine($"Cost = {cost}. Calculated in {sw.ElapsedMilliseconds} ms");
+        float percentage = nn.CalculateClassificationPercentage(test_data);
+        Debug.WriteLine($"Classification percentage = {percentage}");
 
         sw.Restart();
-        int iter = 64;
+        int iter = 1000;
         for (int i = 0; i < iter; i++)
         {
             LabelImagePair[] training_subset = Random.Shared.GetItems(training_data, 100);
@@ -60,6 +62,8 @@ class NNFromScratch
         Debug.WriteLine($"Average time per step = {sw.ElapsedMilliseconds / iter} ms");
         cost = nn.CalculateTotalCost(test_data);
         Debug.WriteLine($"New Cost = {cost}");
+        percentage = nn.CalculateClassificationPercentage(test_data);
+        Debug.WriteLine($"Classification percentage = {percentage}");
         return 0;
     }
 
