@@ -128,7 +128,7 @@ class NNFromScratch
     {
         await Parallel.ForEachAsync(file_names, async (file_name, ct) =>
         {
-            string compressed_file = Path.Join(FILE_PREFIX, file_name, ".gz");
+            string compressed_file = string.Concat(FILE_PREFIX, file_name, ".gz");
             string output_file = Path.Join(FILE_PREFIX, file_name);
             if (!File.Exists(compressed_file))
                 throw new FileNotFoundException("Files must be downloaded before extraction.", compressed_file);
@@ -144,7 +144,7 @@ class NNFromScratch
     {
         await Parallel.ForEachAsync(file_names, async (file_name, ct) =>
         {
-            string file = Path.Join(FILE_PREFIX, file_name, ".gz");
+            string file = string.Concat(FILE_PREFIX, file_name, ".gz");
             string uri = string.Concat(file_name, ".gz");
             _ = Directory.CreateDirectory(Path.GetDirectoryName(file)!);
             File.Create(file).Close();
