@@ -69,9 +69,7 @@ public static class MathUtils
         Debug.Assert(matrix.GetLength(1) == vec.Length);
         float[] output = new float[matrix.GetLength(0)];
         for (int i = 0; i < output.Length; i++)
-        {
             output[i] = Dot(MemoryMarshal.CreateSpan(ref matrix[i, 0], vec.Length), vec);
-        }
         return output;
     }
 
@@ -84,12 +82,11 @@ public static class MathUtils
         return output;
     }
 
-    public static Span<float> HadmardProduct(Span<float> x, Span<float> y)
+    public static float[] HadmardProduct(Span<float> x, Span<float> y)
     {
+        float[] output = new float[x.Length];
         for (int i = 0; i < x.Length; i++)
-        {
-            x[i] *= y[i];
-        }
-        return x;
+            output[i] = x[i] * y[i];
+        return output;
     }
 }

@@ -121,14 +121,15 @@ public class NeuralNet
     {
         float[] invErr = MathUtils.MatMul(MathUtils.MatTranspose(neuralNet[layer + 1].weights), nextLayerError);
         float[] SigDiv = MathUtils.SoftMaxDerivative(weightedInputs[layer]);
-        return MathUtils.HadmardProduct(invErr, SigDiv).ToArray();
+        return MathUtils.HadmardProduct(invErr, SigDiv);
     }
 
-    private float[] OutputLayerError(LabelImagePair pair, in float[][] weightedInputs, in float[][] activations)
+    private static float[] OutputLayerError(LabelImagePair pair, in float[][] weightedInputs,
+            in float[][] activations)
     {
         float[] CostGrad = activations[^1].Zip(pair.label, (a, b) => a - b).ToArray();
         float[] SigDiv = MathUtils.SoftMaxDerivative(weightedInputs[^1]);
-        return MathUtils.HadmardProduct(CostGrad, SigDiv).ToArray();
+        return MathUtils.HadmardProduct(CostGrad, SigDiv);
     }
 }
 
@@ -138,17 +139,26 @@ public struct LabelImagePair
     public float[] img;
 }
 
-[method: SetsRequiredMembers]
 // 0.036 ms to CalculateOutput
-public class Layer(int layerSize, int inputSize)
+public class Layer
 {
     public int LayerSize => weights.GetLength(0);
     public int InputSize => weights.GetLength(1);
 
-    public required float[,] weights = new float[layerSize, inputSize];
-    public required float[] biases = new float[layerSize];
+    public required float[,] weights;
+    public required float[] biases;
 
     public int TotalWeights() => weights.Length + biases.Length;
+
+    [SetsRequiredMembers]
+    public Layer(int layerSize, int inputSize)
+    {
+        weights = new float[layerSize, inputSize];
+        for (int i = 0; i < weights.GetLength(0); i++)
+            for (int j = 0; j < weights.GetLength(1); j++)
+                weights[i, j] = Random.Shared.NextSingle();
+        biases = Random.Shared.NextSingles(layerSize);
+    }
 
     public float[] CalculateLayer(float[] input)
     {
