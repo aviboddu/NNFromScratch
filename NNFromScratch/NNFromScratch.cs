@@ -51,14 +51,15 @@ class NNFromScratch
         Debug.WriteLine($"Classification Percentage = {percentage:P2}");
 
         sw.Restart();
-        int iter = 1024;
+        int iter = 4096;
         for (int i = 0; i < iter; i++)
         {
             LabelImagePair[] training_subset = Random.Shared.GetItems(training_data, 256);
-            if (i % 64 == 1) cost = nn.CalculateTotalCost(test_data[..1000]);
+            if (i % 128 == 1) cost = nn.CalculateTotalCost(test_data[..1000]);
             Delta delta = nn.CalculateTotalNegativeGradient(training_subset);
+            delta.Div(0.25f * (i + 1));
             nn.ApplyDelta(delta);
-            if (i % 64 == 0) Debug.WriteLine($"Cost Delta = {cost - nn.CalculateTotalCost(test_data[..1000])}");
+            if (i % 128 == 0) Debug.WriteLine($"Cost Delta = {nn.CalculateTotalCost(test_data[..1000]) - cost}");
         }
         sw.Stop();
         Debug.WriteLine($"Average time per step = {sw.ElapsedMilliseconds / iter} ms");
@@ -66,6 +67,10 @@ class NNFromScratch
         Debug.WriteLine($"New Cost = {cost}");
         percentage = nn.CalculateClassificationPercentage(test_data);
         Debug.WriteLine($"Classification Percentage = {percentage:P2}");
+        percentage = nn.CalculateClassificationPercentage(training_data);
+        Debug.WriteLine($"Classification Training Percentage = {percentage:P2}");
+        cost = nn.CalculateTotalCost(training_data);
+        Debug.WriteLine($"Training Cost = {cost}");
         return 0;
     }
 
