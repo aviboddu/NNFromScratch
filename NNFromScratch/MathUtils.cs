@@ -28,6 +28,25 @@ public static class MathUtils
 
     public static float[] Sigmoid(IEnumerable<float> v) => v.Select(Sigmoid).ToArray();
 
+    public static float[] SoftMax(IEnumerable<float> v)
+    {
+        IEnumerable<float> expv = v.Select(MathF.Exp);
+        float total = expv.Sum();
+        return expv.Select((x) => x / total).ToArray();
+    }
+
+    public static float[] SoftMaxDerivative(IEnumerable<float> v)
+    {
+        float[] vec = v.ToArray();
+
+        float[,] jacobian = new float[vec.Length, vec.Length];
+        for (int i = 0; i < vec.Length; i++)
+            for (int j = 0; j < vec.Length; j++)
+                jacobian[i, j] = vec[i] * ((i == j ? 1f : 0f) - vec[j]);
+
+        return MatMul(jacobian, vec);
+    }
+
     public static float SigmoidDerivative(float x)
     {
         float ex = MathF.Exp(x);

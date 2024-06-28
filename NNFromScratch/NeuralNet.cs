@@ -44,7 +44,7 @@ public class NeuralNet
         for (int i = 0; i < neuralNet.Length; i++)
         {
             weightedInputs[i] = neuralNet[i].WeightedInput(activations[i]);
-            activations[i + 1] = MathUtils.Sigmoid(weightedInputs[i]);
+            activations[i + 1] = MathUtils.SoftMax(weightedInputs[i]);
         }
         return (activations, weightedInputs);
     }
@@ -82,17 +82,14 @@ public class NeuralNet
         float cost = 0;
         for (int i = 0; i < data.Length; i++)
             cost += CalculateCost(CalculateOutput(data[i].img), data[i].label);
-        return cost / (2 * data.Length);
+        return cost / data.Length;
     }
 
     private static float CalculateCost(float[] output, float[] label)
     {
         float cost = 0;
         for (int i = 0; i < output.Length; i++)
-        {
-            float diff = output[i] - label[i];
-            cost += diff * diff;
-        }
+            cost -= MathF.Log(output[i]) * label[i];
         return cost;
     }
 
@@ -107,10 +104,9 @@ public class NeuralNet
 
     public Delta CalculateNegativeGradient(LabelImagePair pair)
     {
-        // Output Layer Error: (label-output) * SigmoidDerivative(WeightedInput)
         (float[][] activations, float[][] weightedInputs) = CalculateActivations(pair.img);
         float[][] errors = new float[neuralNet.Length][];
-        errors[^1] = OutputLayerError(pair, weightedInputs);
+        errors[^1] = OutputLayerError(pair, weightedInputs, activations);
         for (int i = neuralNet.Length - 2; i >= 0; i--)
             errors[i] = LayerError(weightedInputs, i, errors[i + 1]);
 
@@ -124,14 +120,14 @@ public class NeuralNet
     private float[] LayerError(in float[][] weightedInputs, int layer, float[] nextLayerError)
     {
         float[] invErr = MathUtils.MatMul(MathUtils.MatTranspose(neuralNet[layer + 1].weights), nextLayerError);
-        float[] SigDiv = MathUtils.SigmoidDerivative(weightedInputs[layer]);
+        float[] SigDiv = MathUtils.SoftMaxDerivative(weightedInputs[layer]);
         return MathUtils.HadmardProduct(invErr, SigDiv).ToArray();
     }
 
-    private float[] OutputLayerError(LabelImagePair pair, in float[][] weightedInputs)
+    private float[] OutputLayerError(LabelImagePair pair, in float[][] weightedInputs, in float[][] activations)
     {
-        float[] CostGrad = pair.label.Zip(CalculateOutput(pair.img), (a, b) => a - b).ToArray();
-        float[] SigDiv = MathUtils.SigmoidDerivative(weightedInputs[^1]);
+        float[] CostGrad = activations[^1].Zip(pair.label, (a, b) => a - b).ToArray();
+        float[] SigDiv = MathUtils.SoftMaxDerivative(weightedInputs[^1]);
         return MathUtils.HadmardProduct(CostGrad, SigDiv).ToArray();
     }
 }
@@ -142,32 +138,22 @@ public struct LabelImagePair
     public float[] img;
 }
 
+[method: SetsRequiredMembers]
 // 0.036 ms to CalculateOutput
-public class Layer
+public class Layer(int layerSize, int inputSize)
 {
     public int LayerSize => weights.GetLength(0);
     public int InputSize => weights.GetLength(1);
 
-    public required float[,] weights;
-    public required float[] biases;
-
-    [SetsRequiredMembers]
-    public Layer(int layerSize, int inputSize)
-    {
-        weights = new float[layerSize, inputSize];
-        for (int i = 0; i < layerSize; i++)
-            for (int j = 0; j < inputSize; j++)
-                weights[i, j] = Random.Shared.NextSingle();
-
-        biases = Random.Shared.NextSingles(layerSize);
-    }
+    public required float[,] weights = new float[layerSize, inputSize];
+    public required float[] biases = new float[layerSize];
 
     public int TotalWeights() => weights.Length + biases.Length;
 
     public float[] CalculateLayer(float[] input)
     {
         Debug.Assert(input.Length == InputSize);
-        return MathUtils.Sigmoid(WeightedInput(input));
+        return MathUtils.SoftMax(WeightedInput(input));
     }
 
     public float[] WeightedInput(float[] input)
