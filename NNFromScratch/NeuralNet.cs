@@ -89,7 +89,7 @@ public class NeuralNet
     {
         float cost = 0;
         for (int i = 0; i < output.Length; i++)
-            cost -= MathF.Log(output[i]) * label[i];
+            cost -= MathF.Log(output[i] + 1e-5f) * label[i];
         return cost;
     }
 
@@ -156,8 +156,8 @@ public class Layer
         weights = new float[layerSize, inputSize];
         for (int i = 0; i < weights.GetLength(0); i++)
             for (int j = 0; j < weights.GetLength(1); j++)
-                weights[i, j] = Random.Shared.NextSingle();
-        biases = Random.Shared.NextSingles(layerSize);
+                weights[i, j] = Random.Shared.NextSingle() * 2f - 1f;
+        biases = new float[layerSize];
     }
 
     public float[] CalculateLayer(float[] input)

@@ -55,10 +55,10 @@ class NNFromScratch
         for (int i = 0; i < iter; i++)
         {
             LabelImagePair[] training_subset = Random.Shared.GetItems(training_data, 128);
-            if (i % 16 == 1) cost = nn.CalculateTotalCost(test_data[..1000]);
+            cost = nn.CalculateTotalCost(test_data[..1000]);
             Delta delta = nn.CalculateTotalNegativeGradient(training_subset);
             nn.ApplyDelta(delta);
-            if (i % 16 == 0) Debug.WriteLine($"Cost Delta = {nn.CalculateTotalCost(test_data[..1000]) - cost}");
+            Debug.WriteLine($"Cost Delta = {nn.CalculateTotalCost(test_data[..1000]) - cost}");
         }
         sw.Stop();
         Debug.WriteLine($"Average time per step = {sw.ElapsedMilliseconds / iter} ms");

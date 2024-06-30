@@ -30,7 +30,8 @@ public static class MathUtils
 
     public static float[] SoftMax(IEnumerable<float> v)
     {
-        IEnumerable<float> expv = v.Select(MathF.Exp);
+        float max = v.Max();
+        IEnumerable<float> expv = v.Select((x) => MathF.Exp(x - max));
         float total = expv.Sum();
         return expv.Select((x) => x / total).ToArray();
     }
@@ -70,6 +71,14 @@ public static class MathUtils
         float[] output = new float[matrix.GetLength(0)];
         for (int i = 0; i < output.Length; i++)
             output[i] = Dot(MemoryMarshal.CreateSpan(ref matrix[i, 0], vec.Length), vec);
+        return output;
+    }
+    public static float[,] MatMul(float[,] matrix, float s)
+    {
+        float[,] output = new float[matrix.GetLength(0), matrix.GetLength(1)];
+        for (int i = 0; i < matrix.GetLength(0); i++)
+            for (int j = 0; j < matrix.GetLength(1); j++)
+                output[i, j] = matrix[i, j] * s;
         return output;
     }
 
