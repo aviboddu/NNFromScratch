@@ -1,12 +1,12 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Security.Cryptography;
 using Utils;
 
 namespace NeuralNet;
 
 public class NeuralNet
 {
+    private const float LAMBDA = 0.1f;
     private readonly Layer[] neuralNet;
 
     public NeuralNet(int[] layerSizes)
@@ -83,6 +83,11 @@ public class NeuralNet
         float cost = 0;
         for (int i = 0; i < data.Length; i++)
             cost += CalculateCost(CalculateOutput(data[i].img), data[i].label);
+
+        for (int i = 0; i < neuralNet.Length; i++)
+            for (int j = 0; j < neuralNet[i].weights.GetLength(0); j++)
+                for (int k = 0; k < neuralNet[i].weights.GetLength(1); k++)
+                    cost += LAMBDA * neuralNet[i].weights[j, k] * neuralNet[i].weights[j, k];
         return cost / data.Length;
     }
 
@@ -99,6 +104,11 @@ public class NeuralNet
         Delta gradient = new(null!, null!);
         foreach (LabelImagePair pair in data)
             gradient += CalculateNegativeGradient(pair);
+
+        for (int i = 0; i < gradient.delta_weights.Length; i++)
+            for (int j = 0; j < gradient.delta_weights[i].GetLength(0); j++)
+                for (int k = 0; k < gradient.delta_weights[i].GetLength(1); k++)
+                    gradient.delta_weights[i][j, k] -= LAMBDA * neuralNet[i].weights[j, k] * neuralNet[i].weights[j, k];
         gradient /= data.Length;
         return gradient;
     }

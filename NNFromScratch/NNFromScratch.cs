@@ -51,16 +51,16 @@ class NNFromScratch
         Debug.WriteLine($"Classification Percentage = {percentage:P2}");
 
         sw.Restart();
-        const int iter = 256 + 1;
-        const float eta = 0.5f;
+        const int iter = 1024;
+        const float eta = 0.1f;
+        const int epoch_size = 128;
         for (int i = 0; i < iter; i++)
         {
-            LabelImagePair[] training_subset = Random.Shared.GetItems(training_data, 256);
-            if (i % 16 == 0) cost = nn.CalculateTotalCost(test_data[..1000]);
+            LabelImagePair[] training_subset = Random.Shared.GetItems(training_data, epoch_size);
             Delta delta = nn.CalculateTotalNegativeGradient(training_subset);
             delta *= eta;
             nn.ApplyDelta(delta);
-            if (i % 16 == 1) Debug.WriteLine($"Cost Delta = {nn.CalculateTotalCost(test_data[..1000]) - cost}");
+            if (i % 128 == 0) Debug.WriteLine($"{i}/{iter} complete");
         }
         sw.Stop();
         Debug.WriteLine($"Average time per step = {sw.ElapsedMilliseconds / iter} ms");
@@ -69,7 +69,7 @@ class NNFromScratch
         percentage = nn.CalculateClassificationPercentage(test_data);
         Debug.WriteLine($"Classification Percentage = {percentage:P2}");
 
-        cost = nn.CalculateTotalCost(training_data);
+        cost = nn.CalculateTotalCost(training_data[..10000]);
         Debug.WriteLine($"Training Cost = {cost}");
         return 0;
     }
