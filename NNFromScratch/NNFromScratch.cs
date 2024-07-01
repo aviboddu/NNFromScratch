@@ -38,7 +38,7 @@ class NNFromScratch
 
 
         sw.Restart();
-        int[] layerSizes = [IMAGE_SIZE, 16, 16, 10];
+        int[] layerSizes = [IMAGE_SIZE, 32, 16, 10];
         NeuralNet.NeuralNet nn = new(layerSizes);
         sw.Stop();
         Debug.WriteLine($"Created Neural Network in {sw.ElapsedMilliseconds} ms");
@@ -51,14 +51,16 @@ class NNFromScratch
         Debug.WriteLine($"Classification Percentage = {percentage:P2}");
 
         sw.Restart();
-        int iter = 128;
+        const int iter = 256 + 1;
+        const float eta = 0.5f;
         for (int i = 0; i < iter; i++)
         {
-            LabelImagePair[] training_subset = Random.Shared.GetItems(training_data, 128);
-            cost = nn.CalculateTotalCost(test_data[..1000]);
+            LabelImagePair[] training_subset = Random.Shared.GetItems(training_data, 256);
+            if (i % 16 == 0) cost = nn.CalculateTotalCost(test_data[..1000]);
             Delta delta = nn.CalculateTotalNegativeGradient(training_subset);
+            delta *= eta;
             nn.ApplyDelta(delta);
-            Debug.WriteLine($"Cost Delta = {nn.CalculateTotalCost(test_data[..1000]) - cost}");
+            if (i % 16 == 1) Debug.WriteLine($"Cost Delta = {nn.CalculateTotalCost(test_data[..1000]) - cost}");
         }
         sw.Stop();
         Debug.WriteLine($"Average time per step = {sw.ElapsedMilliseconds / iter} ms");
@@ -66,8 +68,7 @@ class NNFromScratch
         Debug.WriteLine($"New Cost = {cost}");
         percentage = nn.CalculateClassificationPercentage(test_data);
         Debug.WriteLine($"Classification Percentage = {percentage:P2}");
-        percentage = nn.CalculateClassificationPercentage(training_data);
-        Debug.WriteLine($"Classification Training Percentage = {percentage:P2}");
+
         cost = nn.CalculateTotalCost(training_data);
         Debug.WriteLine($"Training Cost = {cost}");
         return 0;

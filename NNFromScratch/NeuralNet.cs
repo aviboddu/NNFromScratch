@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Security.Cryptography;
 using Utils;
 
 namespace NeuralNet;
@@ -44,7 +45,7 @@ public class NeuralNet
         for (int i = 0; i < neuralNet.Length; i++)
         {
             weightedInputs[i] = neuralNet[i].WeightedInput(activations[i]);
-            activations[i + 1] = MathUtils.SoftMax(weightedInputs[i]);
+            activations[i + 1] = MathUtils.Sigmoid(weightedInputs[i]);
         }
         return (activations, weightedInputs);
     }
@@ -89,7 +90,7 @@ public class NeuralNet
     {
         float cost = 0;
         for (int i = 0; i < output.Length; i++)
-            cost -= MathF.Log(output[i] + 1e-5f) * label[i];
+            cost -= (MathF.Log(output[i]) * label[i]) + (MathF.Log(1 - output[i]) * (1 - label[i]));
         return cost;
     }
 
@@ -97,18 +98,18 @@ public class NeuralNet
     {
         Delta gradient = new(null!, null!);
         foreach (LabelImagePair pair in data)
-            gradient.Add(CalculateNegativeGradient(pair));
-        gradient.Div(data.Length);
+            gradient += CalculateNegativeGradient(pair);
+        gradient /= data.Length;
         return gradient;
     }
 
     public Delta CalculateNegativeGradient(LabelImagePair pair)
     {
-        (float[][] activations, float[][] weightedInputs) = CalculateActivations(pair.img);
+        (float[][] activations, float[][] _) = CalculateActivations(pair.img);
         float[][] errors = new float[neuralNet.Length][];
-        errors[^1] = OutputLayerError(pair, weightedInputs, activations);
+        errors[^1] = OutputLayerError(pair, activations);
         for (int i = neuralNet.Length - 2; i >= 0; i--)
-            errors[i] = LayerError(weightedInputs, i, errors[i + 1]);
+            errors[i] = LayerError(i, errors[i + 1]);
 
         float[][,] delta_w = new float[neuralNet.Length][,];
         for (int i = 0; i < errors.Length; i++)
@@ -117,19 +118,15 @@ public class NeuralNet
         return new(errors, delta_w);
     }
 
-    private float[] LayerError(in float[][] weightedInputs, int layer, float[] nextLayerError)
+    private float[] LayerError(int layer, float[] nextLayerError)
     {
         float[] invErr = MathUtils.MatMul(MathUtils.MatTranspose(neuralNet[layer + 1].weights), nextLayerError);
-        float[] SigDiv = MathUtils.SoftMaxDerivative(weightedInputs[layer]);
-        return MathUtils.HadmardProduct(invErr, SigDiv);
+        return invErr;
     }
 
-    private static float[] OutputLayerError(LabelImagePair pair, in float[][] weightedInputs,
-            in float[][] activations)
+    private static float[] OutputLayerError(LabelImagePair pair, in float[][] activations)
     {
-        float[] CostGrad = activations[^1].Zip(pair.label, (a, b) => a - b).ToArray();
-        float[] SigDiv = MathUtils.SoftMaxDerivative(weightedInputs[^1]);
-        return MathUtils.HadmardProduct(CostGrad, SigDiv);
+        return pair.label.Zip(activations[^1], (a, b) => a - b).ToArray();
     }
 }
 
@@ -163,7 +160,7 @@ public class Layer
     public float[] CalculateLayer(float[] input)
     {
         Debug.Assert(input.Length == InputSize);
-        return MathUtils.SoftMax(WeightedInput(input));
+        return MathUtils.Sigmoid(WeightedInput(input));
     }
 
     public float[] WeightedInput(float[] input)
@@ -199,18 +196,30 @@ public class Delta(float[][] delta_bias, float[][,] delta_weights)
 
     }
 
-    public void Div(float val)
+    public static Delta operator +(Delta a, Delta b)
     {
-        float invVal = 1f / val;
-        if (delta_bias != null)
-            for (int i = 0; i < delta_bias.Length; i++)
-                for (int j = 0; j < delta_bias[i].Length; j++)
-                    delta_bias[i][j] *= invVal;
+        a.Add(b);
+        return a;
+    }
 
-        if (delta_weights != null)
-            for (int i = 0; i < delta_weights.Length; i++)
-                for (int j = 0; j < delta_weights[i].GetLength(0); j++)
-                    for (int k = 0; k < delta_weights[i].GetLength(1); k++)
-                        delta_weights[i][j, k] *= invVal;
+    public static Delta operator *(Delta a, float s)
+    {
+        if (a.delta_bias != null)
+            for (int i = 0; i < a.delta_bias.Length; i++)
+                for (int j = 0; j < a.delta_bias[i].Length; j++)
+                    a.delta_bias[i][j] *= s;
+
+        if (a.delta_weights != null)
+            for (int i = 0; i < a.delta_weights.Length; i++)
+                for (int j = 0; j < a.delta_weights[i].GetLength(0); j++)
+                    for (int k = 0; k < a.delta_weights[i].GetLength(1); k++)
+                        a.delta_weights[i][j, k] *= s;
+        return a;
+    }
+
+    public static Delta operator /(Delta a, float s)
+    {
+        float invVal = 1f / s;
+        return a * invVal;
     }
 }
