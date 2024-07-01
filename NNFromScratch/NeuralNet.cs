@@ -130,8 +130,7 @@ public class NeuralNet
 
     private float[] LayerError(int layer, float[] nextLayerError)
     {
-        float[] invErr = MathUtils.MatMul(MathUtils.MatTranspose(neuralNet[layer + 1].weights), nextLayerError);
-        return invErr;
+        return MathUtils.MatMul(MathUtils.MatTranspose(neuralNet[layer + 1].weights), nextLayerError);
     }
 
     private static float[] OutputLayerError(LabelImagePair pair, in float[][] activations)

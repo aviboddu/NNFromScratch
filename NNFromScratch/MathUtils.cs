@@ -48,11 +48,7 @@ public static class MathUtils
         return MatMul(jacobian, vec);
     }
 
-    public static float SigmoidDerivative(float x)
-    {
-        float ex = MathF.Exp(x);
-        return ex / ((ex + 1) * (ex + 1));
-    }
+    public static float SigmoidDerivative(float x) => Sigmoid(x) * (1f - Sigmoid(x));
 
     public static float[] SigmoidDerivative(IEnumerable<float> v) => v.Select(SigmoidDerivative).ToArray();
 

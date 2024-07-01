@@ -52,13 +52,13 @@ class NNFromScratch
 
         sw.Restart();
         const int iter = 1024;
-        const float eta = 0.1f;
+        const float eta = 1f;
         const int epoch_size = 128;
-        for (int i = 0; i < iter; i++)
+        for (int i = 1; i <= iter; i++)
         {
             LabelImagePair[] training_subset = Random.Shared.GetItems(training_data, epoch_size);
             Delta delta = nn.CalculateTotalNegativeGradient(training_subset);
-            delta *= eta;
+            delta *= eta * MathF.ReciprocalSqrtEstimate(i);
             nn.ApplyDelta(delta);
             if (i % 128 == 0) Debug.WriteLine($"{i}/{iter} complete");
         }
