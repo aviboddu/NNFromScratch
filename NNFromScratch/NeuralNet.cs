@@ -6,7 +6,7 @@ namespace NeuralNet;
 
 public class NeuralNet
 {
-    private const float LAMBDA = 0.1f;
+    private const float LAMBDA = 0.25f;
     private readonly Layer[] neuralNet;
 
     public NeuralNet(int[] layerSizes)
