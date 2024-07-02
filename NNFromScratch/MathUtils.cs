@@ -24,6 +24,14 @@ public static class MathUtils
         return output;
     }
 
+    public static float ReLu(float x) => x < 0 ? 0 : x;
+
+    public static float[] ReLu(float[] x) => x.Select(ReLu).ToArray();
+
+    public static float ReLuDerivative(float x) => x < 0 ? 0 : 1;
+
+    public static float[] ReLuDerivative(float[] x) => x.Select(ReLuDerivative).ToArray();
+
     public static float Sigmoid(float x) => 1 / (1 + MathF.Exp(-x));
 
     public static float[] Sigmoid(IEnumerable<float> v) => v.Select(Sigmoid).ToArray();
