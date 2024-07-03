@@ -49,16 +49,16 @@ class NNFromScratch
 
         sw.Restart();
         const int iter = 2048;
-        const float eta = 1f;
+        const float eta = 0.2f;
         const int epoch_size = 128;
+        Delta delta = new(null!, null!);
         for (int i = 1; i <= iter; i++)
         {
             LabelImagePair[] training_subset = Random.Shared.GetItems(training_data, epoch_size);
-            Delta delta = nn.CalculateTotalNegativeGradient(training_subset);
-            float sqmag = delta.SquareMagnitude();
-            delta *= eta * MathF.Max(1.1f - 0.1f * i, 0.01f);
+            delta = nn.CalculateTotalNegativeGradient(training_subset);
+            delta *= eta * MathF.Exp(0.005f * (1f - i));
             nn.ApplyDelta(delta);
-            if (i % 256 == 0)
+            if (i % 128 == 0)
                 Debug.WriteLine($"{i}/{iter} complete. Classification Percentage = {nn.CalculateClassificationPercentage(test_data):P2}");
         }
         sw.Stop();
