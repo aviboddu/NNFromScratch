@@ -95,7 +95,7 @@ public class NeuralNet
     {
         float cost = 0;
         for (int i = 0; i < output.Length; i++)
-            cost -= (MathF.Log(output[i]) * label[i]) + (MathF.Log(1 - output[i]) * (1 - label[i]));
+            cost -= (MathF.Log(output[i] + 1e-8f) * label[i]) + (MathF.Log(1 - output[i] + 1e-8f) * (1 - label[i]));
         return cost;
     }
 
@@ -230,5 +230,29 @@ public class Delta(float[][] delta_bias, float[][,] delta_weights)
     {
         float invVal = 1f / s;
         return a * invVal;
+    }
+
+    public bool IsNaN()
+    {
+        for (int i = 0; i < delta_weights.Length; i++)
+            for (int j = 0; j < delta_weights[i].GetLength(0); j++)
+                for (int k = 0; k < delta_weights[i].GetLength(1); k++)
+                    if (float.IsNaN(delta_weights[i][j, k])) return true;
+        for (int i = 0; i < delta_bias.Length; i++)
+            if (delta_bias[i].Any(float.IsNaN)) return true;
+        return false;
+    }
+
+    public float SquareMagnitude()
+    {
+        float magnitude = 0f;
+        for (int i = 0; i < delta_weights.Length; i++)
+            for (int j = 0; j < delta_weights[i].GetLength(0); j++)
+                for (int k = 0; k < delta_weights[i].GetLength(1); k++)
+                    magnitude += delta_weights[i][j, k] * delta_weights[i][j, k];
+        for (int i = 0; i < delta_bias.Length; i++)
+            for (int j = 0; j < delta_bias[i].Length; j++)
+                magnitude += delta_bias[i][j] * delta_bias[i][j];
+        return magnitude;
     }
 }

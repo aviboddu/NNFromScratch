@@ -48,23 +48,23 @@ class NNFromScratch
         Debug.WriteLine($"Classification Percentage = {percentage:P2}. Calculated in {sw.ElapsedMilliseconds} ms");
 
         sw.Restart();
-        const int iter = 4096;
-        const float eta = 2f;
+        const int iter = 2048;
+        const float eta = 1f;
         const int epoch_size = 128;
         for (int i = 1; i <= iter; i++)
         {
             LabelImagePair[] training_subset = Random.Shared.GetItems(training_data, epoch_size);
             Delta delta = nn.CalculateTotalNegativeGradient(training_subset);
-            delta *= eta * MathF.ReciprocalSqrtEstimate(i);
+            float sqmag = delta.SquareMagnitude();
+            delta *= eta * MathF.Max(1.1f - 0.1f * i, 0.01f);
             nn.ApplyDelta(delta);
-            if (i % 512 == 0) Debug.WriteLine($"{i}/{iter} complete. Classification Percentage = {nn.CalculateClassificationPercentage(test_data):P2}");
+            if (i % 256 == 0)
+                Debug.WriteLine($"{i}/{iter} complete. Classification Percentage = {nn.CalculateClassificationPercentage(test_data):P2}");
         }
         sw.Stop();
         Debug.WriteLine($"Average time per step = {sw.ElapsedMilliseconds / iter} ms");
         float cost = nn.CalculateTotalCost(test_data);
         Debug.WriteLine($"Cost = {cost}");
-        percentage = nn.CalculateClassificationPercentage(test_data);
-        Debug.WriteLine($"Classification Percentage = {percentage:P2}");
 
         cost = nn.CalculateTotalCost(training_data[..10000]);
         Debug.WriteLine($"Training Cost = {cost}");
@@ -76,7 +76,7 @@ class NNFromScratch
         // Construct lookup table
         float[] byte_to_float = new float[byte.MaxValue + 1];
         float invByteMax = 1f / byte.MaxValue;
-        for (int b = 0; b <= byte.MaxValue / 2; b++)
+        for (int b = 0; b <= byte.MaxValue; b++)
             byte_to_float[b] = b * invByteMax;
 
         // Parse training data
